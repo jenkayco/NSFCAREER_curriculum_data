@@ -1,7 +1,7 @@
 # NSFCAREER_curriculum_data
 # Last update: March 23, 2022
 
-Short Description: This repo contains processing scripts and resulting timeseries for the Arctic Feedbacks curriculum developed with Kay NSF CAREER award
+Short Description: This repo contains processing scripts and resulting timeseries for the Arctic Feedbacks curriculum (https://cires.colorado.edu/outreach/resources/unit/arctic-feedbacks-not-all-warming-equal) developed with Kay NSF CAREER award
 
 Code to munge the data:
 1) plot_anom_tseries_include2021.ncl -- produces Arctic Ocean Data for summer (JJA) sea ice extent and top-of-atmosphere radiation (2000-2021)
