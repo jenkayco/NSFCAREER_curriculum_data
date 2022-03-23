@@ -55,6 +55,14 @@ FSDTOApad&time=ispan(0,nyrs*12-1,1)
 FSDTOApad&lat@units="degrees_north"
 FSDTOApad&lon@units="degrees_east"
 FSDTOA_month=clmMonTLL(FSDTOApad)
+FLUTOApad=new((/nyrs*12,sizefoo(1),sizefoo(2)/),float)
+FLUTOApad@_FillValue=-999
+FLUTOApad=FSUTOApad@_FillValue
+FLUTOApad(2:sizefoo(0)-1+2,:,:)=FSUTOA
+FLUTOApad&time=ispan(0,nyrs*12-1,1)
+FLUTOApad&lat@units="degrees_north"
+FLUTOApad&lon@units="degrees_east"
+FLUTOA_month=clmMonTLL(FSUTOApad)
 
 ;;; make a mask
 a    = addfile("$NCARG_ROOT/lib/ncarg/data/cdf/landsea.nc","r")
@@ -69,8 +77,10 @@ cntlat=dim_sum_n_Wrap(lsm_ocneq1,1)
 ;;; apply mask
 FSUTOA_month = mask(FSUTOA_month,(lsm.eq.1),False)
 FSDTOA_month = mask(FSDTOA_month,(lsm.eq.1),False)
+FLUTOA_month = mask(FLUTOA_month,(lsm.eq.1),False)
 FSUTOApad = mask(FSUTOApad,(lsm.eq.1),False)
 FSDTOApad = mask(FSDTOApad,(lsm.eq.1),False)
+FLUTOApad = mask(FLUTOApad,(lsm.eq.1),False)
 
 ;;;; make an Arctic monthly average of the observations
 
@@ -147,6 +157,37 @@ delete(foo)
 ;;; print data, check it
 print(FSNTOA_arctic_jja(3,:))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; **  find climatology **
+;; calculate masked zonal mean for all months
+FLUTOA_mevol_zmean=dim_avg_n_Wrap(FLUTOA_month,2)
+;; calculate the weighted average from 70-90 north for each month (climatology)
+FLUTOA_arctic_climo=new((/12/),float)
+do j=0,11  ;;; over month
+  sumnum=0.0
+  sumden=0.0
+  do i=160,179 ;;; over 70-90 N lat
+    sumnum=sumnum + FLUTOA_mevol_zmean(j,i)*(cntlat(i)/360.)*wgty(i)
+    sumden=sumden + (cntlat(i)/360.)*wgty(i)
+  end do
+  FLUTOA_arctic_climo(j)=sumnum/sumden
+end do
+;print(FLUTOA_arctic_climo)
+;;; ** find timeseries ** 
+;; calculate masked zonal mean for all times
+FLUTOA_mevol_tevol_zmean=dim_avg_n_Wrap(FLUTOApad,2)
+FLUTOA_arctic_tseries=new((/12*nyrs/),float)
+do j=0,dimsizes(FLUTOA_arctic_tseries)-1 ;;; over timeseries
+  sumnum=0.0
+  sumden=0.0
+  do i=160,179 ;;; over 70-90 N lat
+    sumnum=sumnum + FLUTOA_mevol_tevol_zmean(j,i)*(cntlat(i)/360.)*wgty(i)
+    sumden=sumden + (cntlat(i)/360.)*wgty(i)
+  end do
+  FLUTOA_arctic_tseries(j)=sumnum/sumden
+end do
+
+
 ;;; ** find anomaly timeseries of net TOA shortwave**
 mean=ndtooned(conform_dims((/nyrs,12/),FSUTOA_arctic_climo,1))
 FSNTOA_arctic_manom=-(FSUTOA_arctic_tseries-mean) 
@@ -162,6 +203,25 @@ delete(foo)
 
 ;;; print data, check it
 print(FSNTOA_arctic_manom_jja(3,:))
+
+;;; find timeseries of incoming (downwelling) TOA shortwave
+FSDTOA_arctic=FSDTOA_arctic_tseries
+foo=onedtond(FSDTOA_arctic,(/nyrs,12/))
+FSDTOA_arctic_jja=new((/4,dimsizes(year)/),float)
+FSDTOA_arctic_jja(0,:)=foo(:,5)
+FSDTOA_arctic_jja(1,:)=foo(:,6)
+FSDTOA_arctic_jja(2,:)=foo(:,7)
+FSDTOA_arctic_jja(3,:)=(foo(:,5)+foo(:,6)+foo(:,7))/3
+delete(foo)
+
+;;; print data, check it
+print(FSDTOA_arctic_jja(3,:))
+
+;;; find timeseries of outgoing longwave radiation
+FLUTOA_arctic=FLUTOA_arctic_tseries
+foo=onedtond(FLUTOA_arctic,(/nyrs,12/))
+FLUTOA_arctic_ann=(foo(:,0)+foo(:,1)+foo(:,2)+foo(:,3)+foo(:,4)+foo(:,5)+foo(:,6)+foo(:,7)+foo(:,8)+foo(:,9)+foo(:,10)+foo(:,11))/12
+FLUTOA_arctic_son=(foo(:,8)+foo(:,9)+foo(:,10))/3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; SEA ICE EXTENT/AREA OBSERVATIONS ;;;
@@ -304,6 +364,35 @@ print("")
 
 printVarSummary(year)
 printVarSummary(FSNTOA_arctic_jja)
+
+;;;; WRITE OUT A CSV FILE WITH THE DATA
+
+;;year
+;;ICE_arctic_ja(3,:)
+;;FSNTOA_arctic_jja(3,:)
+
+ alist = [/year,ICE_arctic_jja(3,:),FSNTOA_arctic_jja(3,:),FSDTOA_arctic_jja(3,:)/]
+
+ header = (/"------------------------------------------------------------------------------------------------", \
+            "Arctic Ocean Summer (JJA) Observations 2000-2021", \
+	    "Column #1 = Sea Ice Extent, units = million square kilometers", \
+	    "Source: NSIDC Sea Ice Index http://nsidc.org/data/g02135.html, downloaded from ftp://sidads.colorado.edu/DATASETS/NOAA/G02135/ March 2022", \
+	    "Column #2 = Top-of-atmosphere absorbed shortwave radiation, units = Watts per meter squared", \
+	    "Source: CERES-EBAF Ed.4.1, downloaded from https://asdc.larc.nasa.gov/project/CERES/CERES_EBAF_Edition4.1 March 2022", \
+	    "Column #3 = Top-of-atmosphere incoming shortwave radiation, units = Watts per meter squared", \
+	    "Source: CERES-EBAF Ed.4.1, downloaded from https://asdc.larc.nasa.gov/project/CERES/CERES_EBAF_Edition4.1 March 2022", \
+	    "Data munged by Jennifer.E.Kay@colorado.edu using plot_anom_tseries_include2021.ncl, last update March 23, 2022", \
+            "------------------------------------------------------------------------------------------------"/)
+
+ hlist = [/header/]
+
+ fname = "ArcticOceanData_2000-2021.txt"
+ write_table(fname, "w", hlist, "%s ")
+ write_table(fname, "a", alist, "%d,%16.2f,%16.2f,%16.2f")
+
+exit
+
+
 
 ;;;; WRITE OUT A CSV FILE WITH THE DATA
 
