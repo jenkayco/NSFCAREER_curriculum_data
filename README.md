@@ -13,7 +13,7 @@ On Albedo calculations from these data:  Absorbed Shortwave Radiation = Net Shor
 
 
 
-# first update: March 23, 2022
+# v1: March 23, 2022
 
 Short Description: This repo contains processing scripts and resulting timeseries for the Arctic Feedbacks curriculum (https://cires.colorado.edu/outreach/resources/unit/arctic-feedbacks-not-all-warming-equal) developed with Kay NSF CAREER award
 
