@@ -170,7 +170,7 @@ end if
    res@tiYAxisString = "Global"
    res@xyDashPattern = (/0/)
    res@xyLineColor = (/"black"/)
-   res@xyLineThicknessF = (/2./)
+   res@xyLineThicknessF = (/6./)
    res@gsnFrame = False
    res@gsnDraw = False
    res@trYMinF    = -2.0
